@@ -46,6 +46,10 @@ import { getRequiredElement, showElement, hideElement, onDOMReady, debounce } fr
 /** Estado actual de la UI */
 let currentState: UiState = { status: 'idle' };
 
+let allCountries: Country[] = [];
+let selectedRegion = "all";
+
+
 /** Última búsqueda realizada (para evitar búsquedas duplicadas) */
 let lastSearchQuery = '';
 
@@ -65,6 +69,7 @@ let errorMessage: HTMLElement;
 let emptyState: HTMLElement;
 let noResultsState: HTMLElement;
 let countriesList: HTMLElement;
+let regionFilter: HTMLSelectElement;
 
 /**
  * Inicializa las referencias a los elementos del DOM.
@@ -80,6 +85,7 @@ function initializeElements(): void {
   emptyState = getRequiredElement<HTMLElement>('#emptyState');
   noResultsState = getRequiredElement<HTMLElement>('#noResultsState');
   countriesList = getRequiredElement<HTMLElement>('#countriesList');
+  regionFilter = getRequiredElement<HTMLSelectElement>('#regionFilter');
 }
 
 // =============================================================================
@@ -205,10 +211,26 @@ async function handleSearch(): Promise<void> {
     // =========================================================================
     const countries = await searchCountries(query);
 
+    allCountries = countries;
+
+    const regiones = new Set(countries.map(country => country.region));
+    regionFilter.innerHTML = '<option value="all">All Regions</option>';
+
+    regiones.forEach(region => {
+      const option = document.createElement("option");
+      option.value = region;
+      option.textContent = region;
+      regionFilter.appendChild(option);
+    });
+
+    const filtrado = allCountries.filter(country =>
+      selectedRegion === "all" || country.region === selectedRegion
+    );
+
     if (countries.length === 0) {
       render({ status: 'empty' });
     } else {
-      render({ status: 'success', data: countries });
+      render({ status: 'success', data: filtrado });
     }
   } catch (error) {
     // Determinamos el mensaje de error apropiado
@@ -283,6 +305,16 @@ function setupEventListeners(): void {
 
   // Botón de reintentar
   retryButton.addEventListener('click', handleRetry);
+
+  regionFilter.addEventListener("change", () => {
+  selectedRegion = regionFilter.value;
+
+  const filtered = allCountries.filter(country =>
+    selectedRegion === "all" || country.region === selectedRegion
+  );
+
+  render({ status: "success", data: filtered });
+});
 }
 
 /**
