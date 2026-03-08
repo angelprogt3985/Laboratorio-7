@@ -14,7 +14,9 @@
 
 import type { Country } from '../types/country';
 import { formatNumber, formatCapitals } from '../utils/format';
-import { createElement } from '../utils/dom';
+import { toggleFavorite, isFavorite } from '../utils/storage';
+import { createElement, addListener } from '../utils/dom';
+
 
 /**
  * Crea una tarjeta de país para mostrar en la lista.
@@ -114,6 +116,32 @@ export function createCountryCard(
     </div>
   `;
 
+  const favBtn = createElement('button', 'absolute', 'top-3', 'left-3', 'p-1.5', 'rounded-full', 'bg-slate-900/80');
+  favBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+    />
+  </svg>`;
+
+  function corazon(fav: boolean): void {
+    const svg = favBtn.querySelector('svg')!;
+    svg.setAttribute('fill', fav ? 'currentColor' : 'none');
+    favBtn.classList.toggle('text-red-400', fav);
+    favBtn.classList.toggle('text-slate-300', !fav);
+  }
+
+  corazon(isFavorite(country.cca3));
+
+  favBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleFavorite(country.cca3);
+    corazon(isFavorite(country.cca3));
+  });
+
+  card.querySelector('div.relative')!.appendChild(favBtn);
+
+      
+  
   // =========================================================================
   // EVENT LISTENERS
   // =========================================================================
