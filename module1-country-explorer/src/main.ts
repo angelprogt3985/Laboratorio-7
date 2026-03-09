@@ -34,7 +34,9 @@ import type { Country, UiState } from './types/country';
 import { searchCountries, ApiError } from './services/countryApi';
 import { renderCountryList } from './components/CountryCard';
 import { openModal } from './components/CountryModal';
-import { getRequiredElement, showElement, hideElement, onDOMReady, debounce } from './utils/dom';
+import { getRequiredElement, getElement, showElement, hideElement, onDOMReady, debounce } from './utils/dom';
+import { toggleFavorite, isFavorite, getFavoriteList } from './utils/storage';
+
 
 // =============================================================================
 // ESTADO DE LA APLICACIÓN
@@ -48,6 +50,9 @@ let currentState: UiState = { status: 'idle' };
 
 let allCountries: Country[] = [];
 let selectedRegion = "all";
+let favoritesToggle: HTMLInputElement;
+let clearFavoritesButton: HTMLButtonElement;
+
 
 
 /** Última búsqueda realizada (para evitar búsquedas duplicadas) */
@@ -86,6 +91,8 @@ function initializeElements(): void {
   noResultsState = getRequiredElement<HTMLElement>('#noResultsState');
   countriesList = getRequiredElement<HTMLElement>('#countriesList');
   regionFilter = getRequiredElement<HTMLSelectElement>('#regionFilter');
+  favoritesToggle = getElement<HTMLInputElement>('#favoritesToggle') ?? document.createElement('input');
+  clearFavoritesButton = getElement<HTMLButtonElement>('#clearFavoritesButton') ?? document.createElement('button');
 }
 
 // =============================================================================
@@ -182,11 +189,25 @@ function render(state: UiState): void {
  * 4. Hacemos la petición a la API
  * 5. Mostramos resultados o error
  */
+
+ function applyFilters(): void {
+  let filtered = allCountries.filter(country =>
+    selectedRegion === "all" || country.region === selectedRegion
+  );
+
+  if (favoritesToggle.checked) {
+    filtered = filtered.filter(country => isFavorite(country.cca3));
+  }
+
+  render({ status: 'success', data: filtered });
+}
+
 async function handleSearch(): Promise<void> {
   const query = searchInput.value.trim();
 
   // Si la búsqueda está vacía, volvemos al estado inicial
   if (query.length === 0) {
+    allCountries = [];
     render({ status: 'idle' });
     lastSearchQuery = '';
     return;
@@ -201,6 +222,7 @@ async function handleSearch(): Promise<void> {
 
   // Mostramos estado de carga
   render({ status: 'loading' });
+
 
   try {
     // =========================================================================
@@ -315,6 +337,15 @@ function setupEventListeners(): void {
 
   render({ status: "success", data: filtered });
 });
+
+favoritesToggle.addEventListener('change', () => {
+    applyFilters();
+  });
+
+  clearFavoritesButton.addEventListener('click', () => {
+    getFavoriteList().forEach(code => toggleFavorite(code));
+    applyFilters();
+  });
 }
 
 /**
